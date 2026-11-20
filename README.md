@@ -1,90 +1,126 @@
-# 秩序之外 · 手机网页版 1.0
+# Order Beyond · 秩序之外
 
-按用户在 Figma 中修改后的七个界面实现，设计来源：
-https://www.figma.com/design/XEdUswFDI31ODOsqGqTPEu?node-id=6-2
+An interactive romance novel that runs in the browser. You pick a world, a relationship line and a male lead, then write the story one exchange at a time with a language model.
 
-## 打开与使用
+The hard part was never the writing. It was getting a generative model to produce usable prose turn after turn — and to fail gracefully when it doesn't.
 
-网站发布后，使用手机 Safari 或 Chrome 打开网址即可。首页点击「与我一起堕入梦境吧，公主」，选择世界、关系和性格，再输入自己的名字。
+<p align="center">
+  <img src="docs/screenshots/01-home.png" width="260" alt="Cover screen" />
+  <img src="docs/screenshots/06-reader-briefing.png" width="260" alt="Reader with the opening briefing" />
+  <img src="docs/screenshots/07-reader-affinity.png" width="260" alt="Reader after a few turns" />
+</p>
 
-未连接模型时，会生成与世界和身份相符的本地开场。输入第一条回应后，进入 Figma 里的连接设置页。填写自己的 OpenRouter API Key 和模型标识，保存返回，然后发送回应，后续正文由真实模型根据输入生成。不会用固定的三段续文假装回应玩家。
+---
 
-故事、人物设定和关系记忆保存在当前设备的浏览器中。重新打开首页会继续最近的故事；还没发送的文字也会暂存。清除浏览器数据或换设备不会自动同步。API Key 按设计稿保存在本机，不包含在发布包或故事备份中。
+## What it does
 
-## 界面范围
+**Pick a setting.** Ten worlds, eleven relationship lines, ten male-lead archetypes. Each of those is a pool rather than a fixed script: the opening place, the opening shape, her role, his role and the backstory are all drawn independently, so two stories on the same line do not start the same way.
 
-七页：书封、世界、关系、性格、姓名、阅读、连接设置。
+<p align="center">
+  <img src="docs/screenshots/02-world.png" width="200" alt="World selection" />
+  <img src="docs/screenshots/03-trope.png" width="200" alt="Relationship line selection" />
+  <img src="docs/screenshots/04-person.png" width="200" alt="Archetype selection" />
+  <img src="docs/screenshots/05-name.png" width="200" alt="Naming screen" />
+</p>
 
-- 从 Figma 原样导出背景图片与 SVG 光晕／返回图标；资源随站点托管，不依赖七天后过期的 Figma 临时链接。
-- 标题使用 ZCOOL XiaoWei，正文与选择项使用 Noto Serif SC，与设计稿一致。
-- 390 × 844 为基准，适配窄屏手机。正文区域滚动，输入后显示发送操作。
-- 保留原稿文案、颜色与页面顺序。加载、连接错误、重试和保存失败属于实际使用所需的状态。
-- 根据用户「不改 UI」的要求，没有新增书架、注册、付费等页面，也没有改动 Figma 文件。
+**Read a briefing first.** The opening turn also returns an 80–140 character recap in second person: who you are, who he is, what already happened between you. It is written once and never overwritten.
 
-阅读页右上角「重新开始」可回到设定选择。修改连接可在请求失败时点「连接设置」，也可以访问 `/#/settings`。旧故事数据仍保留，当前 UI 不提供故事列表。
+**Watch one number.** The engine tracks eight relationship dials; the reader sees one bar with a named stage (陌路 → 留意 → 在意 → 动心 → 难舍 → 认定 → 非你不可) and how far this turn moved it. Jealousy and tension are deliberately excluded — they rise in the scenes most worth playing, and showing them as a loss would teach the reader to avoid those scenes.
 
-## 已实现的产品逻辑
+**Press Enter on an empty box** when nothing needs you, and the story moves on without leaving a row of "继续" in the transcript.
 
-- 男主姓名和女主身份自动生成并固定保存；只要求玩家输入自己的名字。
-- 10 种世界、12 条感情主线、10 类人物原型；删除原来的特质选择区，改为甜虐滑杆（白头偕老 → 生离死别）。
-- 甜虐值随存档固定保存，影响模型后续的冲突强度与结局倾向。
-- 此地、相逢、其人各一个固定在视口底部的「下一步」，滚动时保持可点击。
-- 允许出差等剧情跳时，原时间位置显示“三月后”“三个月后”等提示；同场对话保持该提示，进入新场景或下一日再清除。
-- 阅读页按故事内时间显示第一天／第一夜等；题名由模型根据实际场景生成，无模型时显示「未题」。不按回复次数或现实离线时长推进天数。
-- 对话优先，减少旁白，停在玩家能自然接话或行动的位置；具体规则见 `docs/对话节奏与时间标记.md`。
-- 阅读页顶部可「重新开始」，重新选择设定并建立新故事；旧存档不会被覆盖。
-- 外貌和身份在叙事中逐渐透露，首幕没有外貌说明框。
-- 真实 OpenRouter 续写，保留关系状态、长期记忆、未完成线索与场景摘要。
-- 请求前保存待续写内容；取消、断网、限流或关闭页面后可以重试，不重复添加玩家回应。
-- 模型输出经过结构验证后才提交存档，错误或截断的响应不会污染故事。
-- IndexedDB 原子写入与版本检查，防止两个页面互相覆盖。旧版单故事存档自动迁移并保留原始数据。
-- 保存失败时提示重试，并可导出未保存内容；不会显示虚假的保存成功。
-- 生产版本缓存已访问的页面素材及程序资源，支持离线阅读已有正文。生成新正文需要网络。
+---
 
-## 本地开发
+## The interesting part: making generated prose hold up
 
-需要 Node.js 22.12+：
+### Quality defined by measurement, not adjectives
+
+Saying a passage "feels like AI" gives a model nothing to act on. So the style rules were derived from a corpus of published Chinese romance — roughly 73,000 lines of dialogue and 163,000 paragraphs:
+
+| Metric | Corpus | Early model output |
+| --- | --- | --- |
+| Median dialogue line | 10 characters | 30–45 |
+| Lines of 5 characters or fewer | 25% | ~0 |
+| Median paragraph | 29 characters | 60–100 |
+| Similes per 10,000 characters | 2.8 | 45 |
+| Narration sentences that are body choreography | **4.8%** | **53%** |
+
+The last row turned out to be the real difference. Sentence length and clause density already matched; what didn't was that the corpus spends its narration telling you what happened, while the model spent it moving bodies around — *he turned, he leaned on the pillar, he straightened, his gaze stopped on your shoulder*. Four sentences, no information.
+
+### A three-tier failure policy
+
+Every generated turn runs through sixteen checks before it reaches the page. They are not equal:
+
+| Tier | Examples | If the rewrite also fails |
+| --- | --- | --- |
+| **Blocking** | Repeats the previous turn; puts him back in a room he left | Refuse the turn |
+| **Style** | Breaks second person; speech without quotation marks; outlier paragraph | Commit it, log it |
+| **Advisory** | Missing Cantonese gloss; three turns of identical length | Never triggers a rewrite at all |
+
+The line is drawn at one question: *does this make the story impossible to follow?* A contradiction does. One mannered simile does not — and a slightly mannered paragraph beats showing the reader an error.
+
+That policy came out of a measurement. An earlier version refused anything that failed, and in one session fifteen rewrites ended in fifteen errors. Running the then-current checks against 24 real turns showed **a 50% false-positive rate**, traceable to three over-broad patterns. After narrowing: 0 false positives on the same 24 turns, with all 8 true-positive samples still caught.
+
+### Deterministic problems get repaired, not rewritten
+
+Chinese models reach for the em dash constantly and keep doing it after being told not to. Spending a round trip on punctuation is waste, so the layout pass rewrites it. The same pass puts each spoken line on its own row, keeps a bracketed gloss attached to the line it explains, and never leaves a row holding nothing but a full stop.
+
+### Recovering instead of discarding
+
+A turn the reader watched being written should not vanish because one field was malformed. The parser repairs unescaped newlines and stray straight quotes inside JSON strings, drops trailing commas, defaults omitted booleans, discards an out-of-pattern time label, and clamps a clock that runs backwards. Truncation is decided by whether the body can be parsed — not by counting braces, which a single stray quote throws off — and escalates the token budget once before salvaging whatever prose arrived.
+
+---
+
+## Architecture
+
+Static front end, no backend required. Stories live in the reader's own IndexedDB, so each save is private by construction and nothing is stored server-side.
+
+```
+src/engine/
+  prompt.ts      assembles the system rules, world, archetype, scene state, JSON contract
+  style.ts       the measured style rules + the layout pass + style checks
+  turns.ts       input classification, repetition, continuity, echo checks
+  generation.ts  the three-tier policy and the single bounded rewrite
+  validation.ts  zod schemas + the salvage layers
+  state.ts       applies a turn to the save; merges scene bookkeeping
+  affinity.ts    folds eight dials into the bar the reader sees
+  worlds.ts      worlds, scenarios, place / role / opening-shape pools
+  trial.ts       quota logic for the shared-key proxy (pure, unit-tested)
+functions/api/   Cloudflare Pages Function: holds the host key, meters the trial
+```
+
+**Stack**: TypeScript · React 19 · Vite · Zod · IndexedDB · Cloudflare Pages + Functions + KV · OpenRouter (SSE streaming) · PWA (service worker + manifest).
+
+**Tests**: 81 cases on the node test runner, plus Playwright flows. Most of them started as a real failure in a play session and were pinned so it could not come back.
+
+---
+
+## Running it
 
 ```sh
 npm ci
-npm run dev
+npm run dev        # http://localhost:5173
 ```
 
-## 生产构建与发布
+Open the settings page and add an OpenRouter key and a model id. Without one the app cannot write the first scene.
 
 ```sh
-npm run build
-npm run preview -- --port 4173
+npm test           # engine tests
+npm run test:ui    # browser flow against a mocked model
+npm run build      # typecheck, bundle, generate the offline shell
 ```
 
-发布目录为 `dist/`。它是静态网页，不需要把模型密钥写进服务器或源码。使用支持 HTTPS 的静态托管服务，把 `dist/` 内容部署在域名根目录即可。手机必须访问部署后的 HTTPS 网址，不能把电脑的 localhost 地址当作手机网址。
+### Deploying
 
-源代码包中的 `dist/` 已构建；`秩序之外-发布包.zip` 可直接交给静态托管服务。当前包不包含账号系统、云存档、统一模型余额或支付系统。
+Cloudflare Pages: build command `npm run build`, output directory `dist`.
 
-## 验证
+To run it on your own key instead of asking each visitor for theirs, set `VITE_TRIAL=1`, bind a KV namespace as `TRIAL`, and set `OPENROUTER_KEY`, `COOKIE_SECRET`, `TRIAL_MODELS` and `TRIAL_CODE` as environment variables. The key stays server-side; the client only ever sees `/api/story`. Quotas live at the top of `src/engine/trial.ts`, but the real ceiling is the spend limit on the key itself.
 
-```sh
-npm test
-npm run test:ui                 # 先启动 localhost:5173，需要 Chrome
-node tests/story-quality-ui.mjs # 已授权动作、自动重写、跳时显示与刷新恢复
-node tests/dialogue-ui.mjs      # 唯一固定按钮、生成题名、同夜对话与次日转换
-node tests/revision-ui.mjs      # 最新选项、光晕反馈、甜虐保存、无焦点框、重新开始
-node tests/generation-ui.mjs    # 连接后的开篇、取消、错误响应、重试
-node tests/offline-ui.mjs       # 先启动生产预览 localhost:4173
-```
+---
 
-用户提供的新版 Prompt 与修订说明原文位于 `docs/互动小说-核心Prompt.txt` 和 `docs/互动小说Prompt修订说明.md`，尚未接入运行版本。运行中的规则位于 `src/engine/prompt.ts`，本包使用此前已验证的版本。检查发现明显重复、动作确认循环或指定禁用表达时，会最多自动重写一次，可能多消耗一次模型调用。
+## Honest limits
 
-单元测试覆盖旧存档特质兼容、120 种世界与主线组合、甜虐端点和新增设定、模型输出校验、存档版本冲突与备份导入。浏览器测试通过受控接口响应验证真实请求路径；没有使用用户密钥发起付费模型调用，真实模型的文风仍需连接后体验。已验证 Chrome 的手机视口；本机 WebKit 启动受运行环境限制，未完成 iPhone 真机测试。
-
-## 资料与许可
-
-- `docs/30个男主特质.md`
-- `docs/小说参考与叙事规则.md`
-- `docs/对话节奏与时间标记.md`（前次规则）
-- `docs/互动小说Prompt修订说明.md`（用户提供的修订说明原文，不代表已实现或已验证）
-- `docs/Figma同步记录.md`
-- [OpenRouter 聊天接口](https://openrouter.ai/docs/api/api-reference/chat/create-a-chat-completion)
-- [ZCOOL XiaoWei 字体](https://fontsource.org/fonts/zcool-xiaowei/install)
-
-用户提供的小说原文没有打包。Figma 插画由用户提供的设计稿导出。字体许可证在 `licenses/` 中。原始 SPEC.md、CODEX_HANDOFF.md、CODEX_NEXT_TASK.md 仅作历史参考；当前实现以本说明和本次用户要求为准。
+- **No scale.** This was built for a handful of friends. There is no usage data, no A/B testing, no concurrency story. Changes were validated against regression cases and qualitative reading, not metrics.
+- **Stories are device-local.** Clearing browser data or switching devices loses them. Cross-device sync would need accounts and a database.
+- **The prompt ships in the bundle.** Anyone can read the rules in the browser's dev tools. Hiding them would mean moving generation server-side.
+- **Semantic problems are still out of reach.** The checks catch repetition, contradiction and measurable style drift. They cannot tell whether a motive is believable or a relationship beat has been earned.
